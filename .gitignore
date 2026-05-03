@@ -1,0 +1,48 @@
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Build outputs
+/app/build/
+/build/
+/captures/
+
+# Gradle
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# Local configs (never commit)
+local.properties
+keystore.properties
+*.jks
+*.keystore
+
+# IDEs
+.idea/
+*.iml
+.project
+.classpath
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated
+gen/
+out/
+release/
+
+# Lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/

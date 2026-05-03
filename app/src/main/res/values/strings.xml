@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LocalIDE</string>
+    <string name="tab_editor">Editor</string>
+    <string name="tab_files">Files</string>
+    <string name="tab_terminal">Terminal</string>
+    <string name="tab_server">Server</string>
+</resources>
