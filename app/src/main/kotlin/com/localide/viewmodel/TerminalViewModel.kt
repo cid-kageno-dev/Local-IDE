@@ -102,7 +102,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             }
             trimmed == "cd" -> {
                 _state.value = _state.value.copy(
-                    workingDir = File("/data/data/com.localide/files")
+                    workingDir = getApplication<Application>().filesDir
                 )
                 return
             }
@@ -123,7 +123,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         val newDir = when {
             path.startsWith("/") -> File(path)
             path == ".." -> _state.value.workingDir.parentFile ?: _state.value.workingDir
-            path == "~" -> File("/data/data/com.localide/files")
+            path == "~" -> getApplication<Application>().filesDir
             else -> File(_state.value.workingDir, path)
         }
         when {
@@ -150,19 +150,24 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                 val stdoutReader = BufferedReader(InputStreamReader(process.inputStream))
                 val stderrReader = BufferedReader(InputStreamReader(process.errorStream))
 
-                val stdoutJob = launch {
-                    stdoutReader.lineSequence().forEach { line ->
-                        appendLine(TerminalLine(line, LineType.OUTPUT))
+                try {
+                    val stdoutJob = launch {
+                        stdoutReader.lineSequence().forEach { line ->
+                            appendLine(TerminalLine(line, LineType.OUTPUT))
+                        }
                     }
-                }
-                val stderrJob = launch {
-                    stderrReader.lineSequence().forEach { line ->
-                        appendLine(TerminalLine(line, LineType.ERROR))
+                    val stderrJob = launch {
+                        stderrReader.lineSequence().forEach { line ->
+                            appendLine(TerminalLine(line, LineType.ERROR))
+                        }
                     }
-                }
 
-                stdoutJob.join()
-                stderrJob.join()
+                    stdoutJob.join()
+                    stderrJob.join()
+                } finally {
+                    stdoutReader.close()
+                    stderrReader.close()
+                }
                 val exitCode = process.waitFor()
 
                 withContext(Dispatchers.Main) {

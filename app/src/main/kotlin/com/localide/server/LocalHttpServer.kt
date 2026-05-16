@@ -16,6 +16,20 @@ class LocalHttpServer(
         val method = session.method.name
         val ip = session.remoteIpAddress ?: "unknown"
 
+        if (!file.canonicalPath.startsWith(rootDir.canonicalPath + File.separator) &&
+            file.canonicalPath != rootDir.canonicalPath) {
+            onRequest?.invoke(method, "/$uri", 403, ip)
+            return newFixedLengthResponse(
+                Response.Status.FORBIDDEN,
+                "text/html",
+                """<!DOCTYPE html><html><head><title>403 Forbidden</title>
+                <style>body{font-family:monospace;background:#0d0d0d;color:#e8e8e8;
+                display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+                h1{color:#7c6af7}</style></head>
+                <body><div><h1>403</h1><p>Access denied</p></div></body></html>"""
+            )
+        }
+
         return when {
             file.isDirectory -> {
                 val indexFile = File(file, "index.html")

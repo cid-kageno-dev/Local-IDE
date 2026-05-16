@@ -66,6 +66,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun saveCurrentFile() {
         val file = activeFile ?: return
+        val savedIdx = _state.value.activeFileIndex
         viewModelScope.launch {
             _state.value = _state.value.copy(saveStatus = SaveStatus.Saving)
             val success = withContext(Dispatchers.IO) {
@@ -74,10 +75,9 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                     true
                 } catch (e: Exception) { false }
             }
-            val idx = _state.value.activeFileIndex
             val files = _state.value.openFiles.toMutableList()
-            if (idx >= 0 && idx < files.size) {
-                files[idx] = files[idx].copy(isModified = false)
+            if (success && savedIdx >= 0 && savedIdx < files.size) {
+                files[savedIdx] = files[savedIdx].copy(isModified = false)
             }
             _state.value = _state.value.copy(
                 openFiles = files,
@@ -104,13 +104,14 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         _state.value = _state.value.copy(activeFileIndex = index)
     }
 
-    fun createNewFile(directory: File, name: String): Boolean {
-        return try {
+    fun createNewFile(directory: File, name: String) {
+        viewModelScope.launch {
             val file = File(directory, name)
-            file.createNewFile()
-            openFile(file)
-            true
-        } catch (e: Exception) { false }
+            val created = withContext(Dispatchers.IO) {
+                try { file.createNewFile() } catch (e: Exception) { false }
+            }
+            if (created) openFile(file)
+        }
     }
 
     fun setSearchQuery(query: String) {

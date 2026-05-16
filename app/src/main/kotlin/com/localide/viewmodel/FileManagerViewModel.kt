@@ -76,27 +76,25 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun refresh() = navigateTo(_state.value.currentDir)
 
-    fun createFile(name: String): Boolean {
+    fun createFile(name: String) {
         val file = File(_state.value.currentDir, name)
-        return try {
-            file.createNewFile()
-            refresh()
-            true
-        } catch (e: Exception) {
-            _state.value = _state.value.copy(error = "Failed to create file: ${e.message}")
-            false
+        viewModelScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                try { file.createNewFile() } catch (e: Exception) { false }
+            }
+            if (success) refresh()
+            else _state.value = _state.value.copy(error = "Failed to create file: check permissions or duplicate name")
         }
     }
 
-    fun createFolder(name: String): Boolean {
+    fun createFolder(name: String) {
         val dir = File(_state.value.currentDir, name)
-        return try {
-            dir.mkdir()
-            refresh()
-            true
-        } catch (e: Exception) {
-            _state.value = _state.value.copy(error = "Failed to create folder: ${e.message}")
-            false
+        viewModelScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                try { dir.mkdir() } catch (e: Exception) { false }
+            }
+            if (success) refresh()
+            else _state.value = _state.value.copy(error = "Failed to create folder: check permissions or duplicate name")
         }
     }
 
@@ -111,15 +109,14 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun renameFile(file: File, newName: String): Boolean {
+    fun renameFile(file: File, newName: String) {
         val newFile = File(file.parent, newName)
-        return try {
-            file.renameTo(newFile)
-            refresh()
-            true
-        } catch (e: Exception) {
-            _state.value = _state.value.copy(error = "Failed to rename: ${e.message}")
-            false
+        viewModelScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                try { file.renameTo(newFile) } catch (e: Exception) { false }
+            }
+            if (success) refresh()
+            else _state.value = _state.value.copy(error = "Failed to rename: target may already exist or be inaccessible")
         }
     }
 

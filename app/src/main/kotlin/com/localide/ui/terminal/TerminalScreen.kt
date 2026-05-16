@@ -45,6 +45,12 @@ fun TerminalScreen(vm: TerminalViewModel = viewModel()) {
         focusRequester.requestFocus()
     }
 
+    LaunchedEffect(state.currentInput) {
+        if (input != state.currentInput) {
+            input = state.currentInput
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
