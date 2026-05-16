@@ -14,6 +14,9 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+
+        manifestPlaceholders["githubCallbackScheme"] = "localide"
+        manifestPlaceholders["githubCallbackHost"] = "auth"
     }
 
     buildTypes {
@@ -64,5 +67,10 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.nanohttpd)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+    implementation(libs.androidx.browser)
+    implementation(libs.okhttp)
     debugImplementation(libs.androidx.ui.tooling)
 }

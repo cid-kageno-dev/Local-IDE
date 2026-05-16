@@ -1,5 +1,6 @@
 package com.localide
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
@@ -16,17 +18,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.localide.ui.auth.AuthScreen
+import com.localide.ui.auth.ProfileSheet
 import com.localide.ui.editor.CodeEditorScreen
 import com.localide.ui.filemanager.FileManagerScreen
 import com.localide.ui.server.ServerScreen
 import com.localide.ui.terminal.TerminalScreen
 import com.localide.ui.theme.LocalIDETheme
+import com.localide.viewmodel.AuthState
+import com.localide.viewmodel.AuthViewModel
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     data object Editor : Screen("editor", "Editor", Icons.Filled.Code)
@@ -38,23 +45,72 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 val bottomNavItems = listOf(Screen.Editor, Screen.Files, Screen.Terminal, Screen.Server)
 
 class MainActivity : ComponentActivity() {
+
+    private var pendingGitHubCode: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        pendingGitHubCode = intent?.data?.getQueryParameter("code")
         setContent {
             LocalIDETheme {
-                LocalIDEApp()
+                val authVm: AuthViewModel = viewModel()
+                HandleGitHubCallback(authVm)
+                AppRoot(authVm)
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val code = intent.data?.getQueryParameter("code")
+        if (code != null) {
+            pendingGitHubCode = code
+        }
+    }
+
+    @Composable
+    private fun HandleGitHubCallback(authVm: AuthViewModel) {
+        val code = pendingGitHubCode
+        LaunchedEffect(code) {
+            if (code != null) {
+                pendingGitHubCode = null
+                authVm.handleGitHubCallback(code)
             }
         }
     }
 }
 
 @Composable
-fun LocalIDEApp() {
+fun AppRoot(authVm: AuthViewModel) {
+    val authState by authVm.authState.collectAsState()
+
+    when (val state = authState) {
+        is AuthState.Loading -> {
+            // Keep splash screen visible while loading session
+        }
+        is AuthState.Authenticated -> {
+            LocalIDEApp(
+                session = state.session,
+                onSignOut = authVm::signOut
+            )
+        }
+        is AuthState.Unauthenticated, is AuthState.Error -> {
+            AuthScreen(vm = authVm)
+        }
+    }
+}
+
+@Composable
+fun LocalIDEApp(
+    session: com.localide.auth.UserSession,
+    onSignOut: () -> Unit
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    var showProfile by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -87,6 +143,16 @@ fun LocalIDEApp() {
                         )
                     )
                 }
+                NavigationBarItem(
+                    icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
+                    label = { Text("Profile", style = MaterialTheme.typography.labelSmall) },
+                    selected = false,
+                    onClick = { showProfile = true },
+                    colors = NavigationBarItemDefaults.colors(
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
             }
         }
     ) { innerPadding ->
@@ -100,5 +166,13 @@ fun LocalIDEApp() {
             composable(Screen.Terminal.route) { TerminalScreen() }
             composable(Screen.Server.route) { ServerScreen() }
         }
+    }
+
+    if (showProfile) {
+        ProfileSheet(
+            session = session,
+            onDismiss = { showProfile = false },
+            onSignOut = onSignOut
+        )
     }
 }
